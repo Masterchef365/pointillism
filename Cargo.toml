@@ -1,0 +1,10 @@
+[package]
+name = "pointillism"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+png = "0.17.3"
+rand = { version = "0.8", features = ["small_rng"] }
+structopt = { version = "0.3", default-features = false }
+anyhow = "1"

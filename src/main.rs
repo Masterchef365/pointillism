@@ -7,6 +7,8 @@ use std::ops::{Add, Sub};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
+use std::collections::HashMap;
+
 #[derive(StructOpt)]
 struct Opt {
     /// Input image path, must be 8-bit RGB
@@ -32,6 +34,14 @@ struct Opt {
     /// Random seed (unsigned integer)
     #[structopt(short, long)]
     seed: Option<u64>,
+
+    /// Fill the circle
+    #[structopt(short, long)]
+    fill: bool,
+
+    /// Use a random color pos, rather than circle center
+    #[structopt(short, long)]
+    aux_color_pos: bool,
 }
 
 fn main() -> Result<()> {
@@ -49,25 +59,34 @@ fn main() -> Result<()> {
     let mut rng = rand::rngs::SmallRng::seed_from_u64(seed);
     println!("Using seed {}", seed);
 
-    //let mut cost_ring = vec![0.0; 5000];
-    //let mut cost_ring_idx = 0;
+    let shape: Vec<Vec<Coord>> = (args.min_point_size..=args.max_point_size).map(|r| {
+        if args.fill {
+            fill_circle(r).collect()
+        } else {
+            stroke_circle(r).collect()
+        }
+    }).collect();
 
     // Draw points
     'points: for point_idx in 0..args.n_points {
-        // Sample a random pixel from the input image
-        let sample_pos = random_pos(&mut rng, input_img.width(), input_img.height());
-        let color = input_img.get(sample_pos).unwrap();
-
         // Select a random radius and point position in the input image
         let r = rng.gen_range(args.min_point_size..=args.max_point_size);
+        let r_idx = r as usize - args.min_point_size as usize;
         let point_pos = random_pos(&mut rng, input_img.width(), input_img.height());
 
-        let shape = || stroke_circle(r).map(|c| point_pos + c);
+        // Sample a random pixel from the input image
+        let sample_pos = if args.aux_color_pos {
+            random_pos(&mut rng, input_img.width(), input_img.height())
+        } else {
+            point_pos
+        };
+        let color = input_img.get(sample_pos).unwrap();
 
         // Calculate the cost for this dot
         let mut total_cost_before = 0.0;
         let mut total_cost_after = 0.0;
-        for coord in shape() {
+        for &coord in &shape[r_idx] {
+            let coord = coord + point_pos; 
             let input_px = match input_img.get(coord) {
                 Some(px) => px,
                 None => continue 'points,
@@ -81,7 +100,8 @@ fn main() -> Result<()> {
 
         // If the cost is an improvement, add the dot to the image
         if total_cost_after < total_cost_before {
-            for coord in shape() {
+            for &coord in &shape[r_idx] {
+                let coord = coord + point_pos; 
                 output_img.set(coord, color);
             }
         }
@@ -226,7 +246,7 @@ fn fill_circle(r: isize) -> impl Iterator<Item = Coord> {
             let width = ((r * r) as f32 - (y * y) as f32).sqrt() as isize;
             (-width..width).map(move |x| Coord(x, y))
         })
-        .flatten()
+    .flatten()
 }
 
 // https://www.geeksforgeeks.org/bresenhams-circle-drawing-algorithm/
@@ -266,8 +286,8 @@ fn stroke_circle(r: isize) -> impl Iterator<Item = Coord> {
 }
 
 /*
-void drawCircle(int xc, int yc, int x, int y) {
-}
+   void drawCircle(int xc, int yc, int x, int y) {
+   }
 
 // Function for circle-generation
 // using Bresenham's algorithm

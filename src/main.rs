@@ -49,8 +49,11 @@ fn main() -> Result<()> {
     let mut rng = rand::rngs::SmallRng::seed_from_u64(seed);
     println!("Using seed {}", seed);
 
+    //let mut cost_ring = vec![0.0; 5000];
+    //let mut cost_ring_idx = 0;
+
     // Draw points
-    'points: for _ in 0..args.n_points {
+    'points: for point_idx in 0..args.n_points {
         // Sample a random pixel from the input image
         let sample_pos = random_pos(&mut rng, input_img.width(), input_img.height());
         let color = input_img.get(sample_pos).unwrap();
@@ -81,6 +84,15 @@ fn main() -> Result<()> {
             for coord in fill_coords() {
                 output_img.set(coord, color);
             }
+        }
+
+        //cost_ring[cost_ring_idx] = total_cost_after.min(total_cost_before);
+        //cost_ring_idx = cost_ring_idx % cost_ring.len();
+
+        if point_idx % 1000 == 0 {
+            //let avg = cost_ring.iter().copied().sum::<f32>() / cost_ring.len() as f32;
+            //println!("{}/{} = {:02}%, Avg: {}", point_idx, args.n_points, point_idx as f32 * 100.0 / args.n_points as f32, avg);
+            println!("{}/{} = {:02}%", point_idx, args.n_points, point_idx as f32 * 100.0 / args.n_points as f32);
         }
     }
 

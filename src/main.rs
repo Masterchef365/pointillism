@@ -62,12 +62,12 @@ fn main() -> Result<()> {
         let r = rng.gen_range(args.min_point_size..=args.max_point_size);
         let point_pos = random_pos(&mut rng, input_img.width(), input_img.height());
 
-        let fill_coords = || fill_circle(r).map(|c| point_pos + c);
+        let shape = || stroke_circle(r).map(|c| point_pos + c);
 
         // Calculate the cost for this dot
         let mut total_cost_before = 0.0;
         let mut total_cost_after = 0.0;
-        for coord in fill_coords() {
+        for coord in shape() {
             let input_px = match input_img.get(coord) {
                 Some(px) => px,
                 None => continue 'points,
@@ -81,7 +81,7 @@ fn main() -> Result<()> {
 
         // If the cost is an improvement, add the dot to the image
         if total_cost_after < total_cost_before {
-            for coord in fill_coords() {
+            for coord in shape() {
                 output_img.set(coord, color);
             }
         }
@@ -89,10 +89,15 @@ fn main() -> Result<()> {
         //cost_ring[cost_ring_idx] = total_cost_after.min(total_cost_before);
         //cost_ring_idx = cost_ring_idx % cost_ring.len();
 
-        if point_idx % 1000 == 0 {
+        if point_idx % 10_000 == 0 {
             //let avg = cost_ring.iter().copied().sum::<f32>() / cost_ring.len() as f32;
             //println!("{}/{} = {:02}%, Avg: {}", point_idx, args.n_points, point_idx as f32 * 100.0 / args.n_points as f32, avg);
-            println!("{}/{} = {:02}%", point_idx, args.n_points, point_idx as f32 * 100.0 / args.n_points as f32);
+            println!(
+                "{}/{} = {:02}%",
+                point_idx,
+                args.n_points,
+                point_idx as f32 * 100.0 / args.n_points as f32
+            );
         }
     }
 
@@ -223,3 +228,50 @@ fn fill_circle(r: isize) -> impl Iterator<Item = Coord> {
         })
         .flatten()
 }
+
+// https://www.geeksforgeeks.org/bresenhams-circle-drawing-algorithm/
+fn stroke_circle(r: isize) -> impl Iterator<Item = Coord> {
+    let mut x = 0;
+    let mut y = r;
+    let mut d = 3 - 2 * r;
+
+    std::iter::from_fn(move || {
+        if y < x {
+            return None;
+        }
+
+        let out = [
+            Coord(x, y),
+            Coord(-x, y),
+            Coord(x, -y),
+            Coord(-x, -y),
+            Coord(y, x),
+            Coord(-y, x),
+            Coord(y, -x),
+            Coord(-y, -x),
+        ];
+
+        x += 1;
+
+        if d > 0 {
+            y -= 1;
+            d = d + 4 * (x - y) + 10;
+        } else {
+            d = d + 4 * x + 6;
+        }
+
+        Some(out)
+    })
+    .flatten()
+}
+
+/*
+void drawCircle(int xc, int yc, int x, int y) {
+}
+
+// Function for circle-generation
+// using Bresenham's algorithm
+void circleBres(int xc, int yc, int r)
+{
+}
+*/

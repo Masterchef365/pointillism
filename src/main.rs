@@ -51,7 +51,7 @@ fn main() -> Result<()> {
 
     // Draw points
     'points: for _ in 0..args.n_points {
-        // Sample a random pixel from the input image 
+        // Sample a random pixel from the input image
         let sample_pos = random_pos(&mut rng, input_img.width(), input_img.height());
         let color = input_img.get(sample_pos).unwrap();
 
@@ -61,9 +61,9 @@ fn main() -> Result<()> {
 
         let fill_coords = || fill_circle(r).map(|c| point_pos + c);
 
-        // Calculate the score for this dot
-        let mut total_score_before = 0.0;
-        let mut total_score_after = 0.0;
+        // Calculate the cost for this dot
+        let mut total_cost_before = 0.0;
+        let mut total_cost_after = 0.0;
         for coord in fill_coords() {
             let input_px = match input_img.get(coord) {
                 Some(px) => px,
@@ -72,11 +72,12 @@ fn main() -> Result<()> {
 
             let output_px = output_img.get(coord).unwrap();
 
-            total_score_before += score(input_px, output_px);
-            total_score_after += score(input_px, color);
+            total_cost_before += cost(input_px, output_px);
+            total_cost_after += cost(input_px, color);
         }
 
-        if total_score_after > total_score_before {
+        // If the cost is an improvement, add the dot to the image
+        if total_cost_after < total_cost_before {
             for coord in fill_coords() {
                 output_img.set(coord, color);
             }
@@ -94,11 +95,14 @@ fn random_pos(rng: &mut impl Rng, width: usize, height: usize) -> Coord {
     )
 }
 
-fn score(truth: [u8; 3], sample: [u8; 3]) -> f32 {
-    // Naive! use a better algo...
-    let [tr, tg, tb] = truth;
-    let [sr, sg, sb] = sample;
-    ((tr * sr + tg * sg + tb * sb) as f32).sqrt()
+fn cost(truth: [u8; 3], sample: [u8; 3]) -> f32 {
+    truth
+        .into_iter()
+        .zip(sample)
+        .map(|(t, s)| t as f32 - s as f32)
+        .map(|v| v * v)
+        .sum::<f32>()
+        .sqrt()
 }
 
 fn read_png(path: &PathBuf) -> Result<RgbImage> {
